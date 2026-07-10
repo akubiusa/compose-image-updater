@@ -55,7 +55,7 @@ pip install -r requirements.txt
 - 再起動を有効にするには、プロジェクト名を `restartable_projects.json` に登録する必要がある (`generate-restartables.sh` で生成)。
 
 ## セキュリティ / 機密情報
-- Discord Webhook URL は環境変数 `CIU_DISCORD_WEBHOOK_URL` またはリポジトリルートの `discord_webhook_url.txt` で指定する。**どちらも Git にコミットしない** (`discord_webhook_url.txt` は `.gitignore` 済み)。
+- Discord Webhook URL は環境変数 `CIU_DISCORD_WEBHOOK_URL`、または `wrapper.sh` と同じディレクトリ (通常はリポジトリルート) に置く `discord_webhook_url.txt` で指定する (`wrapper.sh` は自身のディレクトリへ `cd` してから読み込む)。**どちらも Git にコミットしない** (`discord_webhook_url.txt` は `.gitignore` 済み)。
 - API キー・パスワード等の機密情報をコードやログに出力しない。
 
 ## テスト
