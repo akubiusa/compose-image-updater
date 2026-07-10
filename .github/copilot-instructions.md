@@ -1,61 +1,23 @@
-# GitHub Copilot Instructions
+# GitHub Copilot コードレビュー向け指示
 
-## プロジェクト概要
-- **目的**: `docker-compose.yml` で使用されている `latest` タグのイメージを自動的に更新する
-- **主な機能**:
-    - `docker compose pull` によるイメージの更新確認
-    - `restartable_projects.json` に基づくコンテナの再起動
-    - Discord Webhook による更新通知（イメージのバージョン変更、エラーログの確認）
-- **対象ユーザー**: Docker Compose を使用してサービスを運用している開発者・運用者
+このファイルは GitHub Copilot のコードレビュー機能向けの指示です。以下の観点でレビューしてください。
 
-## 共通ルール
-- 会話は日本語で行う。
-- コミットメッセージは [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) に従う。
-    - `<type>(<scope>): <description>` 形式
-    - `<description>` は日本語で記載
-- ブランチ命名は [Conventional Branch](https://conventional-branch.github.io) に従う。
-    - `<type>/<description>` 形式（`feat/`, `fix/` など）
-- 日本語と英数字の間には半角スペースを入れる。
+## プロジェクト背景
+Python 製の CLI ツールで、Docker Compose プロジェクトの `latest` タグイメージを自動更新し、コンテナ再起動と Discord 通知を行う。外部依存は `requests` のみ。自動テストは未導入。
 
-## 技術スタック
-- **言語**: Python (3.6+)
-- **依存関係管理**: `pip` (`requirements.txt`)
-- **外部ツール**: Docker, Docker Compose
+## 重点的に確認する点
+- **エラーハンドリング**: `subprocess.run` の `returncode` を確認しているか。`docker compose` コマンドの失敗が無視されていないか。外部コマンド・ネットワーク (Discord 通知) の失敗時に処理が破綻しないか。
+- **機密情報**: Discord Webhook URL (`CIU_DISCORD_WEBHOOK_URL` / `discord_webhook_url.txt`) や認証情報が、コード・ログ・コミットに混入していないか。`.gitignore` から除外対象が漏れていないか。
+- **シェルスクリプト**: `wrapper.sh` / `update-all.sh` / `generate-restartables.sh` で、引数チェック・パスのクォート・`set -e` 相当のエラー処理が適切か。ShellCheck 相当の指摘 (未クォート変数など) に注意。
+- **回帰リスク**: `latest` タグのみを対象とする前提、バージョン比較 (`org.opencontainers.image.version` → `Created` フォールバック)、`restartable_projects.json` による再起動判定のロジックを壊していないか。
+- **テスト不在の補完**: 自動テストが無いため、ロジック変更は手動検証手順が PR 説明に書かれているかを確認する。
 
-## 開発コマンド
-```bash
-# 依存関係のインストール
-pip install -r requirements.txt
+## コーディング規約 (レビュー時の目安)
+- Python は PEP 8 準拠、命名はスネークケース。リンターによる自動強制は無いため、規約は目安として指摘する。
+- コメント・docstring は日本語、エラーメッセージ (print 出力等) は英語。
+- コミットメッセージは Conventional Commits (説明は日本語)。
 
-# スクリプトの実行 (venv 環境を自動作成して実行)
-./wrapper.sh /path/to/docker-compose-project/
-
-# 全プロジェクトの一括更新
-./update-all.sh /path/to/projects/ /path/to/logs/
-
-# 再起動対象プロジェクトリストの生成
-./generate-restartables.sh /path/to/projects/
-```
-
-## コーディング規約
-- **フォーマット**: PEP 8 に準拠。
-- **命名規則**: スネークケース（`update_images`, `image_name` など）。
-- **コメント**: 日本語で記載。
-- **エラーメッセージ**: 英語で記載。
-- **Docstring**: 関数には日本語で docstring を記載する。
-
-## テスト方針
-- 現時点では自動テストは導入されていない。
-- 変更時は手動での動作確認を徹底する。
-
-## セキュリティ / 機密情報
-- `discord_webhook_url.txt` や環境変数 `CIU_DISCORD_WEBHOOK_URL` に含まれる Webhook URL は Git にコミットしない。
-- ログに個人情報や認証情報を出力しない。
-
-## ドキュメント更新
-- 重要な変更があった場合は `README.md` を更新する。
-- 外部インターフェース（引数や設定ファイル形式）の変更時は必ずドキュメントに反映する。
-
-## リポジトリ固有
-- `latest` タグが指定されているイメージのみが更新対象となる。
-- 再起動を有効にするには `restartable_projects.json` にプロジェクト名を記載する必要がある。
+## フラグすべきでない既知パターン
+- `subprocess.run([...])` をリスト引数 (`shell=False`) で呼ぶのは意図的で安全。シェルインジェクションの誤検知をしない。
+- 外部ライブラリを増やさず標準ライブラリ + `requests` で完結させる方針。「より高機能なライブラリの導入」提案は不要。
+- 日本語コメントは仕様。英語化の提案は不要。
