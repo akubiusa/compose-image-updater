@@ -4,15 +4,24 @@ import sys
 import time
 from pprint import pprint
 
-from src import (down_containers, get_compose_images, get_error_log_count,
-                 get_latest_tag_images, pull_images, send_to_discord,
-                 up_containers)
+from src import (
+    down_containers,
+    get_compose_images,
+    get_error_log_count,
+    get_latest_tag_images,
+    pull_images,
+    send_to_discord,
+    up_containers,
+)
 
 
 def is_restartable_project(cwd: str):
     # restartable_projects.json を読む
     # ディレクトリ名があれば True を返す
-    path = os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))), "restartable_projects.json")
+    path = os.path.join(
+        os.path.abspath(os.path.dirname(os.path.dirname(__file__))),
+        "restartable_projects.json",
+    )
     if not os.path.exists(path):
         return False
     with open(path) as f:
@@ -23,7 +32,7 @@ def is_restartable_project(cwd: str):
 def update_images(cwd: str):
     try:
         images = get_compose_images(cwd)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # 従来どおり、あらゆる失敗をエラー通知扱いにして処理を継続する
         print(f"[ERROR] Failed to get docker compose images: {e}")
         return None
 
@@ -69,7 +78,7 @@ def main():
         print("[INFO] Update not found")
         return
 
-    restart_status = 'NOT-RESTARTABLE'
+    restart_status = "NOT-RESTARTABLE"
     error_log_count = 0
     if is_restartable_project(cwd):
         print("[INFO] Restarting project")
@@ -99,33 +108,39 @@ def main():
         "NOT-RESTARTABLE": "Docker image updated (%s)",
     }[restart_status]
     description = {
-        "SUCCESS": "" if error_log_count == 0 else f"But after restarted found error: {error_log_count}\n",
+        "SUCCESS": ""
+        if error_log_count == 0
+        else f"But after restarted found error: {error_log_count}\n",
         "FAILED": "Please check the project manually",
-        "NOT-RESTARTABLE": "Please apply the update with `docker compose down && docker compose up --build -d`."
+        "NOT-RESTARTABLE": "Please apply the update with `docker compose down && docker compose up --build -d`.",
     }[restart_status]
     color = {
-        "SUCCESS": 0x00ff00 if error_log_count == 0 else 0xffa500,  # green or orange
-        "FAILED": 0xff0000,  # red
-        "NOT-RESTARTABLE": 0xffff00,  # yellow
+        "SUCCESS": 0x00FF00 if error_log_count == 0 else 0xFFA500,  # green or orange
+        "FAILED": 0xFF0000,  # red
+        "NOT-RESTARTABLE": 0xFFFF00,  # yellow
     }[restart_status]
 
-    send_to_discord(discord_webhook_url, "", {
-        "title": title % cwd.split("/")[-1],
-        "description": "%sTarget directory: %s" % (description, cwd),
-        "fields": [
-            {
-                "name": image_name,
-                "value": f"prev: {image['prev']}\ncurrent: {image['current']}",
-                "inline": True,
-            }
-            for image_name, image in res.items()
-        ],
-        "footer": {
-            "text": "Hostname: %s" % os.uname()[1],
+    send_to_discord(
+        discord_webhook_url,
+        "",
+        {
+            "title": title % cwd.split("/")[-1],
+            "description": f"{description}Target directory: {cwd}",
+            "fields": [
+                {
+                    "name": image_name,
+                    "value": f"prev: {image['prev']}\ncurrent: {image['current']}",
+                    "inline": True,
+                }
+                for image_name, image in res.items()
+            ],
+            "footer": {
+                "text": f"Hostname: {os.uname()[1]}",
+            },
+            "color": color,
         },
-        "color": color,
-    })
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
