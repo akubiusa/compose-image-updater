@@ -16,8 +16,7 @@ from src import (
 
 
 def is_restartable_project(cwd: str):
-    # restartable_projects.json を読む
-    # ディレクトリ名があれば True を返す
+    """Return True if the last path component of cwd is listed in restartable_projects.json."""
     path = os.path.join(
         os.path.abspath(os.path.dirname(os.path.dirname(__file__))),
         "restartable_projects.json",
@@ -32,7 +31,7 @@ def is_restartable_project(cwd: str):
 def update_images(cwd: str):
     try:
         images = get_compose_images(cwd)
-    except Exception as e:  # noqa: BLE001  # 従来どおり、あらゆる失敗をエラー通知扱いにして処理を継続する
+    except Exception as e:  # noqa: BLE001  # catch everything on purpose: log the error and skip this project
         print(f"[ERROR] Failed to get docker compose images: {e}")
         return None
 
@@ -93,7 +92,7 @@ def main():
 
         if down_result and up_result:
             restart_status = "SUCCESS"
-            # wait 10 seconds
+            # give the containers time to start before scanning their logs
             time.sleep(10)
             error_log_count = get_error_log_count(cwd)
 

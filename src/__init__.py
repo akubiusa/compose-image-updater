@@ -6,7 +6,7 @@ import requests
 
 
 class DockerCommandError(Exception):
-    """docker コマンドの実行・結果解析に失敗したことを表す例外。"""
+    """Raised when a docker command fails or its output cannot be parsed."""
 
 
 def get_compose_images(cwd: str):
@@ -18,7 +18,7 @@ def get_compose_images(cwd: str):
 
     stdout = result.stdout.decode("utf-8")
     lines = stdout.splitlines()
-    lines = lines[1:]  # remove header
+    lines = lines[1:]
     lines = [line for line in lines if line]
     lines = [line.split() for line in lines]
     return lines  # [[container, repository, tag, image_id, size], ...]
@@ -41,13 +41,14 @@ def get_image(image_name: str):
 
 
 def get_latest_tag_from_ls(image_name: str):
+    """Return the image ID of the `latest` tag of image_name from `docker image ls`, or None."""
     result = subprocess.run(["docker", "image", "ls"], check=False, capture_output=True)
     if result.returncode != 0:
         raise DockerCommandError("Failed to get docker image ls")
 
     stdout = result.stdout.decode("utf-8")
     lines = stdout.splitlines()
-    lines = lines[1:]  # remove header
+    lines = lines[1:]
     lines = [line for line in lines if line]
     lines = [line.split() for line in lines]
 
@@ -61,6 +62,7 @@ def get_latest_tag_from_ls(image_name: str):
 
 
 def get_image_version(image_data: dict):
+    """Return the `org.opencontainers.image.version` label, falling back to `Created`."""
     if not image_data:
         return None
     if (
@@ -74,7 +76,7 @@ def get_image_version(image_data: dict):
 
 
 def get_latest_tag_images(images: list[list[str]]):
-    # check latest tag image
+    """Return {repository: version} for the `latest` images in images, or None if there are none."""
     if len(list(filter(lambda img: img[2] == "latest", images))) == 0:
         print("No latest tag image found")
         return None
